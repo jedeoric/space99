@@ -26,6 +26,10 @@ _switch_ovl
 	eor #2
 	sta diskcntrl
 	sta $0314
+  ; Telestrat
+  lda #0
+  sta $032F
+  
 	pla
 	plp
 	rts
@@ -126,12 +130,14 @@ restore_ier
 
 wait_completion 
    lda $0314 
-   bmi wait_completion 
+   bmi wait_completion
+   .dsb (($0310&3)-((*+3)&3))&3,$ea   
    lda $0310 
    rts 
 
 restore_track0 
-   lda #$0C 
+   lda #$0C
+   .dsb (($0310&3)-((*+3)&3))&3,$ea   
    sta $0310 
    jsr wait_completion 
    and #$10   ; seek error ? 
@@ -141,6 +147,7 @@ restore_track0
 seek_track 
    lda #$1C 
    ora __stepping_rate 
+   .dsb (($0310&3)-((*+3)&3))&3,$ea
    sta $0310 
    jsr wait_completion 
    and #$18   ; seek error or CRC error ? 
@@ -159,11 +166,16 @@ __select_sector
    sta $0314 
 
    lda __cylinder 
+; TELESTRAT COmpat   
+  .dsb (($0313&3)-((*+3)&3))&3,$ea
+  
    sta $0313 
+.dsb (($0311&3)-((*+3)&3))&3,$ea   
    cmp $0311 
    beq *+5 
    jsr seek_track 
    lda __sector 
+   .dsb (($0312&3)-((*+3)&3))&3,$ea
    sta $0312 
    rts 
 
@@ -180,17 +192,21 @@ readwrite_data
 read_data 
    lda $0318 
    bmi read_data 
+   ; TELESTRAT COmpat   
+   .dsb (($0313&3)-((*+3)&3))&3,$ea
    lda $0313 
    sta (pbufl),y 
    iny 
    bne read_data 
    inc pbufh 
    jmp read_data 
+
    
 write_data 
    lda $0318 
    bmi write_data 
    lda (pbufl),y 
+   .dsb (($0313&3)-((*+3)&3))&3,$ea   
    sta $0313 
    iny 
    bne write_data 
@@ -217,7 +233,9 @@ fdc_irq
    pla 
    lda diskcntrl 
    sta $0314   ; disables disk irq 
+  .dsb (($0310&3)-((*+3)&3))&3,$ea      
    lda $0310   ; gets status and resets irq 
+ 
    and #$7c 
    sta __status 
    rts 
@@ -232,6 +250,7 @@ __sector_readwrite
 again 
    jsr __select_sector 
    lda readwrite 
+   .dsb (($0310&3)-((*+3)&3))&3,$ea
    sta $0310 
    jsr readwrite_data 
    lda __status 
