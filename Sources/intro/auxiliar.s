@@ -33,7 +33,9 @@ dbug
 	beq dbug
 	rts
 #endif
-diskcntrl .byt $86
+
+
+
 
 _switch_eprom
     lda $0314
@@ -41,7 +43,14 @@ _switch_eprom
     sta $0314
 	rts
 
+
+
+
+diskcntrl .byt $86
+
+telestrat_bank .byt $06 ; for telestrat compatibility : Jede 27/03/2017
 _switch_ovl 
+.(
 	php
 	pha
 	sei
@@ -49,10 +58,24 @@ _switch_ovl
 	eor #2
 	sta diskcntrl
 	sta $0314
+  
+  ; for telestrat compatibility : Jede 27/03/2017
+  lda telestrat_bank
+  bne switch_to_ram_overlay
+  lda #$06 ; switch into atmos rom in stratoric cardridge
+  
+  jmp store
+switch_to_ram_overlay
+  lda #$00
+store  
+  sta $321
+  sta telestrat_bank
+  ;end of telestrat compatibility
+  
 	pla
 	plp
 	rts
-
+.)
 
 
 _reboot_oric
@@ -60,6 +83,11 @@ _reboot_oric
     lda $0314
     and #%01111101
     sta $0314
+    ; ; for telestrat compatibility : Jede 27/03/2017
+    lda #$07 ; switch into atmos rom in stratoric cardridge
+    sta $321
+    ; end of telestrat compatibility
+    
     
     ldx #0
     txs
